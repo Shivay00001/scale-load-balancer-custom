@@ -1,50 +1,44 @@
-# Scale Load Balancer Custom
+# scale-load-balancer-custom
 
-An enterprise-grade solution engineered for high performance.
+A real reverse-proxy load balancer: forwards live HTTP traffic to a backend
+pool with round-robin or least-connections scheduling, active health checks,
+passive failure ejection, and a `/stats` endpoint.
 
-![Language](https://img.shields.io/badge/Language-Go-blue)
-![Status](https://img.shields.io/badge/Status-Active-success)
-![License](https://img.shields.io/badge/License-MIT-green)
+## Run
 
-## 🚀 Overview
+```bash
+pip install -r requirements.txt
+BACKENDS="127.0.0.1:9001,127.0.0.1:9002" python app.py --port 8000
+python app.py --port 8000 --backends 127.0.0.1:9001,127.0.0.1:9002 \
+    --algo least-conn --health-interval 5 --health-path /healthz
+```
 
-Welcome to the **Scale Load Balancer Custom** repository. This project is built to deliver a robust and scalable solution tailored to modern development standards.
+Every path except `/stats` is proxied to the chosen backend (method, query
+string, headers, and body are all forwarded; responses stream back with
+their real status codes).
 
-## ✨ Features
+## Behavior
 
-- **High Performance:** Optimized for speed and efficiency.
-- **Scalable Architecture:** Designed to grow with your needs.
-- **Clean Codebase:** Follows best practices and industry standards.
-- **Secure by Default:** Engineered with security in mind.
+- **Algorithms**: `round-robin` (default) or `least-conn`.
+- **Health checks**: `GET <backend><health-path>` every `--health-interval`
+  seconds; failures eject the backend, recovery re-admits it. A failed live
+  request also ejects that backend immediately (with one failover retry).
+- **`GET /stats`**: algorithm plus per-backend health, request count,
+  active connections, failures, last error.
 
-## 🛠️ Prerequisites
+## Environment note
 
-Ensure you have the following installed in your environment before proceeding:
-- Appropriate runtime/compiler for `Go`
-- Standard development tools
+`no_proxy`/`NO_PROXY` must be unset (or must not contain broken patterns)
+because the bundled `httpx` crashes on the `*[::1]`-style entries some
+sandboxes ship; outbound traffic keeps working via the regular `*_proxy`
+variables. The LB itself never uses a proxy for backends or health checks.
 
-## 📦 Installation
+## Test
 
-Follow standard installation steps for `Go` to set up the project locally:
+```bash
+pytest -q
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Shivay00001/scale-load-balancer-custom.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd scale-load-balancer-custom
-   ```
-3. Install dependencies according to the standard `Go` ecosystem.
-
-## 💻 Usage
-
-Run the project using standard execution commands for `Go`. Ensure all environment variables and configurations are set prior to execution.
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
-
-## 📝 License
-
-This project is licensed under standard terms.
+Spins up two real backend servers and verifies round-robin distribution,
+body/query forwarding, dead-backend ejection by the health checker,
+`/stats` counters, and least-connections spreading under concurrency.
