@@ -1,5 +1,7 @@
 # scale-load-balancer-custom
 
+Built by [VisionQuantech](https://visionquantech.com) — AI agents, apps & tools for small businesses.
+
 A real reverse-proxy load balancer: forwards live HTTP traffic to a backend
 pool with round-robin or least-connections scheduling, active health checks,
 passive failure ejection, and a `/stats` endpoint.
